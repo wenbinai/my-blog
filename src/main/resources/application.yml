@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: my-blog
+  datasource:
+    url: jdbc:mysql://localhost:3306/sob_blog_system?characterEncoding=utf-8&useSSL=false&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+  redis:
+    port: 8080
+    host: 122.9.36.233
+    password: 123456
+  jpa:
+    show-sql: true
+
+server:
+  port: 8088
+logging:
+  pattern:
+    console: "%d{yyyy/MM/dd-HH:mm:ss} [%thread] [%-5level] %logger %msg%n"
