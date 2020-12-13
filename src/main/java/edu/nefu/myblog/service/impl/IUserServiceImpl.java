@@ -22,6 +22,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletRequest;
@@ -120,7 +122,7 @@ public class IUserServiceImpl implements IUserService {
         log.info("content==>" + content);
 
         // 保存到redis里面 10分钟有效
-        redisUtil.set(Constants.User.KEY_CAPTCHA_CONTENT + captchaKey, content, Constants.TimeValue.TEN_MINUTE);
+        redisUtil.set(Constants.User.KEY_CAPTCHA_CONTENT + captchaKey, content, Constants.TimeValueInSecond.TEN_MINUTE);
         log.info("键==>" + Constants.User.KEY_CAPTCHA_CONTENT + captchaKey);
         // 显示图片
         targetCaptcha.out(response.getOutputStream());
@@ -173,7 +175,7 @@ public class IUserServiceImpl implements IUserService {
     @Override
     public ResponseResult updateUserInfo(HttpServletRequest request, HttpServletResponse response, String userId, User user) {
 //        修改用户需要用户已经登陆的权限(通过jwt中的token);
-        User userFromTokenKey = checkUser(request, response);
+        User userFromTokenKey = checkUser();
         if (userFromTokenKey == null) {
             return ResponseResult.ACCOUNT_NOT_LOGIN();
         }
@@ -205,18 +207,51 @@ public class IUserServiceImpl implements IUserService {
         return ResponseResult.SUCCESS("用户信息更新成功");
     }
 
+
     /**
-     * 从tokeKey中获取用户信息
+     * 校验用户是否登陆
      *
-     * @param request
-     * @param response
      * @return
      */
-    public User checkUser(HttpServletRequest request, HttpServletResponse response) {
-        String tokenKey = CookieUtil.getCookie(request, Constants.User.KEY_TOKEN);
+    @Override
+    public User checkUser() {
+        String tokenKey = CookieUtil.getCookie(getRequest(), Constants.User.KEY_TOKEN);
         log.info("获取userInfo==>" + tokenKey);
+
+        User user = parseToken(tokenKey);
+        if (user == null) {
+            RefreshToken refreshToken = refreshTokenDao.findOneByTokenKey(tokenKey);
+            // 用户没有登陆否则refreshToken过期
+            if (refreshToken == null) {
+                return null;
+            }
+            String userId = refreshToken.getUserId();
+            log.info("userId==>" + userId);
+            User userFromDB = userDao.findOneById(userId);
+            String newTokenKey = createToken(getResponse(), userFromDB);
+            log.info("newTokenKey==>" + newTokenKey);
+            return parseToken(newTokenKey);
+        }
+        return user;
+    }
+
+    private HttpServletRequest getRequest() {
+        ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return servletRequestAttributes.getRequest();
+    }
+
+    private HttpServletResponse getResponse() {
+        ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        HttpServletRequest request = servletRequestAttributes.getRequest();
+        return servletRequestAttributes.getResponse();
+
+    }
+
+    private User parseToken(String tokenKey) {
+
         String jwtStr = (String) redisUtil.get(Constants.User.KEY_TOKEN + tokenKey);
         log.info("获取jwtStr==>" + jwtStr);
+        // tokenKey 无效或者没有
         if (TextUtil.isEmpty(jwtStr)) {
             return null;
         }
@@ -281,11 +316,11 @@ public class IUserServiceImpl implements IUserService {
         }
         ipSendTime++;
         // 1个小时有效期
-        redisUtil.set(Constants.User.KEY_EMAIL_SEND_IP + remoteAddr, ipSendTime, Constants.TimeValue.ONE_HOUR);
+        redisUtil.set(Constants.User.KEY_EMAIL_SEND_IP + remoteAddr, ipSendTime, Constants.TimeValueInSecond.ONE_HOUR);
         // 30秒内不能重发
-        redisUtil.set(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress, "true", Constants.TimeValue.HALF_MINUTE);
+        redisUtil.set(Constants.User.KEY_EMAIL_SEND_ADDRESS + emailAddress, "true", Constants.TimeValueInSecond.HALF_MINUTE);
         // 保存邮箱验证码到redis中 10分钟有效期
-        redisUtil.set(Constants.User.KEY_EMAIL_CONTENT + emailAddress, verifyCode, Constants.TimeValue.TEN_MINUTE);
+        redisUtil.set(Constants.User.KEY_EMAIL_CONTENT + emailAddress, verifyCode, Constants.TimeValueInSecond.TEN_MINUTE);
 
         return ResponseResult.SUCCESS("发送邮箱验证码成功, 请在有限期内填写");
     }
@@ -509,12 +544,12 @@ public class IUserServiceImpl implements IUserService {
         //前端访问的时候，携带token的md5key，从redis中获取即可
         String tokenKey = DigestUtils.md5DigestAsHex(token.getBytes());
         //保存token到redis里，有效期为2个小时，key是tokenKey
-        redisUtil.set(Constants.User.KEY_TOKEN + tokenKey, token, Constants.TimeValue.TWO_HOUR);
+        redisUtil.set(Constants.User.KEY_TOKEN + tokenKey, token, Constants.TimeValueInMillion.TWO_HOUR);
 
         //把tokenKey写到cookies里
         CookieUtil.setUpCookie(response, Constants.User.KEY_TOKEN, tokenKey);
         //生成refreshToken, 保存一个月
-        String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValue.ONE_MONTH);
+        String refreshTokenValue = JwtUtil.createRefreshToken(userFromDb.getId(), Constants.TimeValueInMillion.ONE_MONTH);
         //保存到数据库里
         //refreshToken，tokenKey，用户ID，创建时间，更新时间
         RefreshToken refreshToken = new RefreshToken();
@@ -527,4 +562,5 @@ public class IUserServiceImpl implements IUserService {
         refreshTokenDao.save(refreshToken);
         return tokenKey;
     }
+
 }

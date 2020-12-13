@@ -35,12 +35,21 @@ public interface Constants {
     }
 
     // 单位位s
-    interface TimeValue {
+    interface TimeValueInSecond {
         int ONE_HOUR = 60 * 60;
         int TWO_HOUR = 60 * 60 * 2;
         int ONE_MONTH = 60 * 60 * 24 * 30;
         int HALF_MINUTE = 30;
         int TEN_MINUTE = 10 * 60;
+    }
+
+    // 单位毫秒
+    interface TimeValueInMillion {
+        long ONE_HOUR = 60 * 60 * 1000;
+        long TWO_HOUR = 60 * 60 * 2 * 1000;
+        long ONE_MONTH = 60 * 60 * 24 * 30 * 1000;
+        long HALF_MINUTE = 30 * 1000;
+        long TEN_MINUTE = 10 * 60 * 1000;
     }
 
     interface ImageType {

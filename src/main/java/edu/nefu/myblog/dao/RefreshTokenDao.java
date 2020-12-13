@@ -5,4 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RefreshTokenDao extends JpaRepository<RefreshToken, String> {
     int deleteAllByUserId(String userId);
+
+    RefreshToken findOneByTokenKey(String tokenKey);
 }

@@ -33,5 +33,5 @@ public interface IUserService {
                                   String userId,
                                   User user);
 
-    User checkUser(HttpServletRequest request, HttpServletResponse response);
+    User checkUser();
 }

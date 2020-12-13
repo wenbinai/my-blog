@@ -1,6 +1,9 @@
 package edu.nefu.myblog.service.impl;
 
+import edu.nefu.myblog.dao.ImageDao;
+import edu.nefu.myblog.pojo.Image;
 import edu.nefu.myblog.response.ResponseResult;
+import edu.nefu.myblog.service.IUserService;
 import edu.nefu.myblog.service.ImageService;
 import edu.nefu.myblog.util.Constants;
 import edu.nefu.myblog.util.SnowflakeIdWorker;
@@ -9,8 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,6 +28,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@Transactional
 public class ImageServiceImpl implements ImageService {
     private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
     @Value("${my.blog.image.save-path}")
@@ -32,6 +38,11 @@ public class ImageServiceImpl implements ImageService {
 
     @Autowired
     private SnowflakeIdWorker idWorker;
+
+    @Autowired
+    private ImageDao imageDao;
+    @Autowired
+    private IUserService userService;
 
     /**
      * 上传路径: 可以配置, 再配置文件中配置
@@ -44,7 +55,9 @@ public class ImageServiceImpl implements ImageService {
      * @return
      */
     @Override
-    public ResponseResult upload(MultipartFile file) {
+    public ResponseResult upload(MultipartFile file,
+                                 HttpServletRequest request,
+                                 HttpServletResponse response) {
         log.info("imagePath-->" + imagePath);
 //        1. 判断文件是否存在;
         if (file == null) {
@@ -122,6 +135,19 @@ public class ImageServiceImpl implements ImageService {
             result.put("name", originalFilename);
             log.info("resultPath ==>" + resultPath);
             log.info("originalFilename==>" + originalFilename);
+            Image image = new Image();
+            image.setContentType(contentType);
+            image.setId(id);
+            image.setCreateTime(new Date());
+            image.setUpdateTime(new Date());
+            image.setName(originalFilename);
+            image.setState("1");
+            image.setUrl(resultPath);
+            // todo checkUser 的优化
+            image.setUserId(userService.checkUser().getId());
+            image.setPath(targetFile.getPath());
+            imageDao.save(image);
+
             ResponseResult responseResult = ResponseResult.SUCCESS("文件上传成功");
             responseResult.setData(result);
             log.info("文件上传成功并结束");
@@ -167,5 +193,30 @@ public class ImageServiceImpl implements ImageService {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * 删除图片
+     * (不是真的删除, 只是改变图片状态)
+     *
+     * @param imageId
+     * @return
+     */
+    @Override
+    public ResponseResult deleteById(String imageId) {
+        int result = imageDao.deleteImageByUpdateState(imageId);
+        if (result > 0) {
+            return ResponseResult.SUCCESS("删除成功");
+        }
+        return ResponseResult.FAILED("图片不存在");
+    }
+
+    @Override
+    public ResponseResult listImages(int page, int size) {
+//        // 处理page,size
+//        page = checkPage(page);
+//        size = checkPage(size);
+
+        return null;
     }
 }

@@ -31,7 +31,7 @@ public class PermissionCheckService {
         if (TextUtil.isEmpty(token)) {
             return false;
         }
-        User user = userService.checkUser(request, response);
+        User user = userService.checkUser();
         log.info("user==>" + user.toString());
         if (user == null || TextUtil.isEmpty(user.getRoles())) {
             return false;
