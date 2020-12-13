@@ -8,6 +8,25 @@ import java.util.Date;
 @Entity
 @Table(name = "tb_user")
 public class User {
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id='" + id + '\'' +
+                ", userName='" + userName + '\'' +
+                ", password='" + password + '\'' +
+                ", roles='" + roles + '\'' +
+                ", avatar='" + avatar + '\'' +
+                ", email='" + email + '\'' +
+                ", sign='" + sign + '\'' +
+                ", state='" + state + '\'' +
+                ", regIp='" + regIp + '\'' +
+                ", loginIp='" + loginIp + '\'' +
+                ", createTime=" + createTime +
+                ", updateTime=" + updateTime +
+                '}';
+    }
+
     @Id
     private String id;
     /**

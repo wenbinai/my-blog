@@ -12,6 +12,14 @@ public class ResponseResult {
         this.message = responseState.getMessage();
     }
 
+    public static ResponseResult PERMISSION_FORBID() {
+        return new ResponseResult(ResponseState.PERMISSION_FORBID);
+    }
+
+    public static ResponseResult ACCOUNT_NOT_LOGIN() {
+        return new ResponseResult(ResponseState.ACCOUNT_NOT_LOGIN);
+    }
+
     public static ResponseResult SUCCESS() {
         return new ResponseResult(ResponseState.SUCCESS);
     }

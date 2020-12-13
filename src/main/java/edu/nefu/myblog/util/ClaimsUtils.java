@@ -7,6 +7,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ClaimsUtils {
+    /**
+     * 将User转化为JwtJson
+     *
+     * @param userFromDb
+     * @return
+     */
     public static Map<String, Object> User2Claims(User userFromDb) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", userFromDb.getId());
@@ -19,6 +25,12 @@ public class ClaimsUtils {
         return claims;
     }
 
+    /**
+     * 将jwtJson转换为User
+     *
+     * @param claims
+     * @return
+     */
     public static User Claims2User(Claims claims) {
         User user = new User();
         String id = (String) claims.get("id");

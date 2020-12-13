@@ -43,5 +43,16 @@ public interface Constants {
         int TEN_MINUTE = 10 * 60;
     }
 
+    interface ImageType {
+        String PREFIX = "image/";
+        String TYPE_JPG = "jpg";
+        String TYPE_PNG = "png";
+        String TYPE_GIF = "gif";
+
+        String TYPE_JPG_WITH_PREFIX = PREFIX + "jpg";
+        String TYPE_GIF_WITH_PREFIX = PREFIX + "gif";
+        String TYPE_PNG_WITH_PREFIX = PREFIX + "png";
+    }
+
 
 }

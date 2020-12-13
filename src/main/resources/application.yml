@@ -12,9 +12,17 @@ spring:
     password: 123456
   jpa:
     show-sql: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 
 server:
   port: 8088
 logging:
   pattern:
     console: "%d{yyyy/MM/dd-HH:mm:ss} [%thread] [%-5level] %logger %msg%n"
+
+my.blog.image.save-path: E:\images
+# 2m
+my.blog.image.max-size: 2097152

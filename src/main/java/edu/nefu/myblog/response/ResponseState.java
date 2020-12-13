@@ -5,7 +5,9 @@ public enum ResponseState {
     LOGIN_SUCCESS(true, 20001, "登陆成功"),
     FAILED(false, 40000, "操作失败"),
     GET_RESOURCE_FAILED(false, 40001, "获取资源失败"),
-    LOGIN_FAILED(false, 49999, "登陆失败");
+    LOGIN_FAILED(false, 49999, "登陆失败"),
+    PERMISSION_FORBID(false, 40001, "没有权限"),
+    ACCOUNT_NOT_LOGIN(false, 50001, "账号未登陆");
 
 
     ResponseState(boolean success, int code, String message) {

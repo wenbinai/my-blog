@@ -1,5 +1,7 @@
 package edu.nefu.myblog.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wf.captcha.ArithmeticCaptcha;
 import com.wf.captcha.GifCaptcha;
 import com.wf.captcha.SpecCaptcha;
@@ -13,6 +15,7 @@ import edu.nefu.myblog.pojo.User;
 import edu.nefu.myblog.response.ResponseResult;
 import edu.nefu.myblog.service.IUserService;
 import edu.nefu.myblog.util.*;
+import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -23,8 +26,6 @@ import org.springframework.util.DigestUtils;
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.awt.*;
-import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Random;
@@ -67,6 +68,13 @@ public class IUserServiceImpl implements IUserService {
             Captcha.FONT_10
     };
 
+    /**
+     * 发送图灵验证码
+     *
+     * @param captchaKey
+     * @param response
+     * @throws Exception
+     */
     public void sendCaptchaCode(String captchaKey, HttpServletResponse response) throws Exception {
         // TODO 防止图灵验证码发送过于频繁
 
@@ -96,7 +104,7 @@ public class IUserServiceImpl implements IUserService {
             // 三个参数分别为宽、高、位数
             targetCaptcha = new SpecCaptcha(200, 60, 5);
         } else if (captchaType == 1) {
-            // git类型
+            // gif类型
             targetCaptcha = new GifCaptcha(130, 48);
         } else {
             //算术类型
@@ -116,7 +124,106 @@ public class IUserServiceImpl implements IUserService {
         log.info("键==>" + Constants.User.KEY_CAPTCHA_CONTENT + captchaKey);
         // 显示图片
         targetCaptcha.out(response.getOutputStream());
+    }
 
+    /**
+     * 获取用户信息
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public ResponseResult getUserInfo(String userId) throws JsonProcessingException {
+//        1. 对userId进行检验;
+        if (TextUtil.isEmpty(userId)) {
+            return ResponseResult.FAILED("用户Id不能为空");
+        }
+//        2. 通过userId查找用户是否存在;
+        User user = userDao.findOneById(userId);
+
+//        3. 若不存在, 返回用户不存在信息;
+        if (user == null) {
+            return ResponseResult.FAILED("用户不存在");
+        }
+//        4. 存在, 则返回用户某些不敏感信息
+        ObjectMapper mapper = new ObjectMapper();
+
+        String userJson = mapper.writeValueAsString(user);
+        log.info("userJson--> ", userJson);
+        User newUser = mapper.readValue(userJson, User.class);
+        newUser.setPassword("");
+        newUser.setEmail("");
+        newUser.setRegIp("");
+        newUser.setLoginIp("");
+        ResponseResult responseResult = ResponseResult.SUCCESS("获取成功");
+        log.info("new User -->", newUser);
+        responseResult.setData(newUser);
+        return responseResult;
+    }
+
+    /**
+     * 修改用户信息
+     *
+     * @param request
+     * @param response
+     * @param userId
+     * @param user
+     * @return
+     */
+    @Override
+    public ResponseResult updateUserInfo(HttpServletRequest request, HttpServletResponse response, String userId, User user) {
+//        修改用户需要用户已经登陆的权限(通过jwt中的token);
+        User userFromTokenKey = checkUser(request, response);
+        if (userFromTokenKey == null) {
+            return ResponseResult.ACCOUNT_NOT_LOGIN();
+        }
+        User userFromDb = userDao.findOneById(userFromTokenKey.getId());
+//        1. 通过userId判断用户;
+        if (!userFromDb.getId().equals(userId)) {
+            return ResponseResult.PERMISSION_FORBID();
+        }
+//        2. 修改用户名;
+        if (!TextUtil.isEmpty(user.getUserName())) {
+            User oneByUserName = userDao.findOneByUserName(user.getUserName());
+            if (oneByUserName != null) {
+                return ResponseResult.FAILED("用户名已注册");
+            }
+            userFromDb.setUserName(user.getUserName());
+        }
+//        3. 修改头像;
+        if (!TextUtil.isEmpty(user.getAvatar())) {
+            userFromDb.setAvatar(user.getAvatar());
+        }
+//        4. 修改签名;
+        userFromDb.setSign(user.getSign());
+        userDao.save(userFromDb);
+//        5. 删除token, 下次需要token时, 会根据refreshToken从新创建
+        String tokenKey = CookieUtil.getCookie(request, Constants.User.KEY_TOKEN);
+        log.info("tokenKey ==>" + tokenKey);
+        redisUtil.del(Constants.User.KEY_TOKEN + tokenKey);
+        log.info("redis 删除tokenKey==>" + Constants.User.KEY_TOKEN + tokenKey);
+        return ResponseResult.SUCCESS("用户信息更新成功");
+    }
+
+    /**
+     * 从tokeKey中获取用户信息
+     *
+     * @param request
+     * @param response
+     * @return
+     */
+    public User checkUser(HttpServletRequest request, HttpServletResponse response) {
+        String tokenKey = CookieUtil.getCookie(request, Constants.User.KEY_TOKEN);
+        log.info("获取userInfo==>" + tokenKey);
+        String jwtStr = (String) redisUtil.get(Constants.User.KEY_TOKEN + tokenKey);
+        log.info("获取jwtStr==>" + jwtStr);
+        if (TextUtil.isEmpty(jwtStr)) {
+            return null;
+        }
+        Claims claims = JwtUtil.parseJWT(jwtStr);
+        User user = ClaimsUtils.Claims2User(claims);
+        log.info("claim to user ==>" + user.toString());
+        return user;
     }
 
     /**
@@ -210,7 +317,7 @@ public class IUserServiceImpl implements IUserService {
         if (managerAccountState != null) {
             return ResponseResult.FAILED("管理员账号已经初始化");
         }
-        // 1. 检查数据
+        // 1. TODO 利用常用的设计模式减少if-else数量 检查数据
         if (TextUtil.isEmpty(user.getUserName())) {
             return ResponseResult.FAILED("用户名不能为空 ");
         }
@@ -225,6 +332,8 @@ public class IUserServiceImpl implements IUserService {
         user.setRoles(Constants.User.ROLE_ADMIN);
         user.setAvatar(Constants.User.DEFAULT_AVATAR);
         user.setState(Constants.User.DEFAULT_STATE);
+        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+        // 获取登陆的ip地址
         String remoteAddr = request.getRemoteAddr();
         log.info("remoteAddr ==>" + remoteAddr);
         user.setRegIp(remoteAddr);
@@ -363,6 +472,9 @@ public class IUserServiceImpl implements IUserService {
             return ResponseResult.FAILED("用户名或密码不正确");
         }
 
+        /**
+         * 前端密码加密怎么做?
+         */
         boolean matches = bCryptPasswordEncoder.matches(password, userFromDb.getPassword());
         if (!matches) {
             return ResponseResult.FAILED("用户名或密码不正确");

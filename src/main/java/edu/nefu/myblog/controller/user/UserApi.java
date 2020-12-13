@@ -1,15 +1,10 @@
 package edu.nefu.myblog.controller.user;
 
-import com.wf.captcha.ArithmeticCaptcha;
-import com.wf.captcha.GifCaptcha;
-import com.wf.captcha.SpecCaptcha;
-import com.wf.captcha.base.Captcha;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.nefu.myblog.pojo.User;
 import edu.nefu.myblog.response.ResponseResult;
 import edu.nefu.myblog.service.IUserService;
-import edu.nefu.myblog.util.Constants;
 import edu.nefu.myblog.util.RedisUtil;
-import edu.nefu.myblog.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -17,8 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.websocket.server.PathParam;
-import java.util.Random;
 
 @RestController
 @RequestMapping("/user")
@@ -84,6 +77,7 @@ public class UserApi {
         try {
             userService.sendCaptchaCode(captchaKey, response);
         } catch (Exception e) {
+            e.printStackTrace();
             log.info("发送图灵验证码失败");
         }
     }
@@ -117,8 +111,8 @@ public class UserApi {
      * @return
      */
     @GetMapping("/{userId}")
-    public ResponseResult getUserInfo(@PathVariable("userId") String userId) {
-        return null;
+    public ResponseResult getUserInfo(@PathVariable("userId") String userId) throws JsonProcessingException {
+        return userService.getUserInfo(userId);
     }
 
     /**
@@ -126,9 +120,14 @@ public class UserApi {
      *
      * @return
      */
-    @PutMapping
-    public ResponseResult updateUserInfo(@RequestBody User user) {
-        return null;
+    @PutMapping("/{userId}")
+    public ResponseResult updateUserInfo(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            @PathVariable("userId") String userId,
+            @RequestBody User user) {
+
+        return userService.updateUserInfo(request, response, userId, user);
     }
 
 

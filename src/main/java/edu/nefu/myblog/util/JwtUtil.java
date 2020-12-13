@@ -41,6 +41,18 @@ public class JwtUtil {
     }
 
 
+    /**
+     * 创造freshToken
+     * 获取当前时间;
+     * 设置Id
+     * 设置时间
+     * 设置加密算法和盐
+     * 设置过期时间
+     *
+     * @param userId
+     * @param ttl
+     * @return
+     */
     public static String createRefreshToken(String userId, long ttl) {
         long nowMillis = System.currentTimeMillis();
         Date now = new Date(nowMillis);
@@ -54,6 +66,13 @@ public class JwtUtil {
     }
 
     /**
+     * 创建Token
+     * 获取当前时间
+     * 设置时间
+     * 设置加密算法和盐
+     * 设置保存内容, claims
+     * 设置过期时间
+     *
      * @param claims 载荷
      * @return token
      */
@@ -75,6 +94,12 @@ public class JwtUtil {
         return builder.compact();
     }
 
+    /**
+     * 解析JwtStr字符串
+     *
+     * @param jwtStr
+     * @return
+     */
     public static Claims parseJWT(String jwtStr) {
         return Jwts.parser()
                 .setSigningKey(key)
