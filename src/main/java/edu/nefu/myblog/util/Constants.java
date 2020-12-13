@@ -4,6 +4,11 @@ package edu.nefu.myblog.util;
  * 常用的常量
  */
 public interface Constants {
+    interface Page {
+        int DEFAULT_PAGE = 1;
+        int DEFAULT_SIZE = 10;
+    }
+
     interface User {
         // 管理员角色
         String ROLE_ADMIN = "role_admin";

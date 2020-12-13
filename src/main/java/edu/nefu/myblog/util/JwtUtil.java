@@ -12,7 +12,7 @@ public class JwtUtil {
     //盐值
     private static String key = "f9ed40b0c85ea1b211f065c96fde847a";
 
-    private static long ttl = 3 * 60 * 60 * 100;//2个小时
+    private static long ttl = Constants.TimeValueInMillion.TWO_HOUR;//2个小时
 
     public static String getKey() {
         return key;
